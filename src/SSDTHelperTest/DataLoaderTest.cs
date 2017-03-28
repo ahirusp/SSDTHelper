@@ -18,10 +18,13 @@ namespace SSDTHelperTest
     [Test]
     public void Load_SingleTable()
     {
-      var dt = SSDTHelper.ExcelReader.Read(Util.GetLocalFileFullPath("TestData.xlsx"), "People");
-
       var loader = new SSDTHelper.DataLoader();
       loader.ConnectionString = Config.ConnectionString;
+
+      const string sheetName = "People";
+      var schema = loader.GetSchema(sheetName);
+
+      var dt = SSDTHelper.ExcelReader.Read(Util.GetLocalFileFullPath("TestData.xlsx"), sheetName, schema);
       loader.Load(dt);
 
       using (var cn = new System.Data.SqlClient.SqlConnection(Config.ConnectionString))

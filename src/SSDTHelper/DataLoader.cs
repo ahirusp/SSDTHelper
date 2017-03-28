@@ -92,5 +92,25 @@ namespace SSDTHelper
       }
     }
 
+    public DataTable GetSchema(string tableName)
+    {
+      using (var cn = new SqlConnection(this.ConnectionString))
+      {
+        cn.Open();
+        using (var cmd = cn.CreateCommand())
+        {
+          var sql = $"SELECT TOP 0 * FROM {tableName}";
+
+          cmd.CommandText = sql;
+          cmd.CommandType = CommandType.Text;
+
+          var dt = new DataTable();
+          dt.TableName = tableName;
+          dt.Load(cmd.ExecuteReader());
+
+          return dt;
+        }
+      }
+    }
   }
 }

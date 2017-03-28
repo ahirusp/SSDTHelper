@@ -24,9 +24,9 @@ namespace SSDTHelper
     /// Read a specified sheet of Excel file into DataTable.
     /// The sheet name is set in the TableName property of the DataTable.
     /// </remarks>
-    public static DataTable Read(string excellFilePath, string sheetName)
+    public static DataTable Read(string excellFilePath, string sheetName, DataTable schema = null)
     {
-      return Read(excellFilePath, (new string[] { sheetName }))[0];
+      return Read(excellFilePath, (new string[] { sheetName }), (schema == null) ? null : (new DataTable[] { schema }))[0];
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ namespace SSDTHelper
     /// Read a specified sheet of Excel file into DataTable.
     /// The sheet name is set in the TableName property of the DataTable.
     /// </remarks>
-    public static IList<DataTable> Read(string path, IEnumerable<string> sheetNames)
+    public static IList<DataTable> Read(string path, IEnumerable<string> sheetNames, IEnumerable<DataTable> schemas = null)
     {
       using (var xl = new ExcelPackage())
       {
@@ -62,14 +62,27 @@ namespace SSDTHelper
             var dt = new DataTable() { TableName = sheetName };
 
             var endColumn = ws.Dimension.End.Column;
-            foreach (var cell in ws.Cells[1, 1, 1, endColumn])
+
+            if(schemas != null && schemas.Any((x) => x.TableName == sheetName))
             {
-              if (cell.End.Column == ws.Dimension.End.Column && cell.Text == COMMENT_COLUMN_HEADER)
+              dt = schemas.First((x) => x.TableName == sheetName).Clone();
+
+              if (ws.Cells[1, endColumn].Text == COMMENT_COLUMN_HEADER)
               {
-                endColumn = cell.End.Column - 1;
-                break;
+                endColumn--;
               }
-              dt.Columns.Add(cell.Text);
+            }
+            else
+            {
+              foreach (var cell in ws.Cells[1, 1, 1, endColumn])
+              {
+                if (cell.End.Column == ws.Dimension.End.Column && cell.Text == COMMENT_COLUMN_HEADER)
+                {
+                  endColumn = cell.End.Column - 1;
+                  break;
+                }
+                dt.Columns.Add(cell.Text);
+              }
             }
 
             var startRow = 2;
@@ -79,18 +92,39 @@ namespace SSDTHelper
 
               if (wsRow.Any(x => !string.IsNullOrEmpty(x.Text)))
               {
-                DataRow row = dt.Rows.Add();
+                DataRow row = dt.NewRow();
                 foreach (var cell in wsRow)
                 {
                   if (cell.Text == "NULL")
                   {
                     row[cell.Start.Column - 1] = DBNull.Value;
                   }
+                  else if (dt.Columns[cell.Start.Column - 1].DataType == typeof(bool))
+                  {
+                    row[cell.Start.Column - 1] = cell.Value;
+                  }
+                  else if (dt.Columns[cell.Start.Column - 1].DataType == typeof(int))
+                  {
+                    row[cell.Start.Column - 1] = cell.Value;
+                  }
+                  else if (dt.Columns[cell.Start.Column - 1].DataType == typeof(long))
+                  {
+                    row[cell.Start.Column - 1] = cell.Value;
+                  }
+                  else if (dt.Columns[cell.Start.Column - 1].DataType == typeof(double))
+                  {
+                    row[cell.Start.Column - 1] = cell.Value;
+                  }
+                  else if (dt.Columns[cell.Start.Column - 1].DataType == typeof(DateTime))
+                  {
+                    row[cell.Start.Column - 1] = cell.Value;
+                  }
                   else
                   {
                     row[cell.Start.Column - 1] = cell.Text;
                   }
                 }
+                dt.Rows.Add(row);
               }
             }
             dts.Add(dt);
